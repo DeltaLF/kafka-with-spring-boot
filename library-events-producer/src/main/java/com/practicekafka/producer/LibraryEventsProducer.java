@@ -1,6 +1,9 @@
 package com.practicekafka.producer;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -46,6 +49,25 @@ public class LibraryEventsProducer {
                         handleSuccess(key, value, sendResult);
                     }
                 });
+    }
+
+    public SendResult<Integer, String> sendLibraryEventBlocking(LibraryEvent libraryEvent)
+            throws JsonProcessingException, InterruptedException, ExecutionException, TimeoutException {
+        var key = libraryEvent.libraryEventId();
+        var value = objectMapper.writeValueAsString(libraryEvent);
+
+        // with get specified
+        // 1. Blocking call - get metadata about the kafka cluster (only the first time)
+        // 2. Block and wait until the message is sent to the kafka broker
+        var sendResult = kafkaTemplate.send(topic, key, value)
+                // .get();
+                .get(3, TimeUnit.SECONDS);
+
+        // because it's blocking, there will be InterruptedException, ExecutionException
+        // needed to be handled
+        handleSuccess(key, value, sendResult);
+        return sendResult;
+
     }
 
     private void handleSuccess(Integer key, String value, SendResult<Integer, String> sendResult) {

@@ -1,5 +1,8 @@
 package com.practicekafka.controller;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,11 +27,15 @@ public class LibraryEventsController {
 
     @PostMapping("/v1/libraryevent")
     public ResponseEntity<LibraryEvent> postLibraryEvent(
-            @RequestBody LibraryEvent libraryEvent) throws JsonProcessingException {
+            @RequestBody LibraryEvent libraryEvent)
+            throws JsonProcessingException, InterruptedException, ExecutionException, TimeoutException {
 
         log.info("libraryEvent : {}", libraryEvent);
         // invoke the kafka producer
-        libraryEventsProducer.sendLibraryEvent(libraryEvent);
+        // libraryEventsProducer.sendLibraryEvent(libraryEvent);
+        libraryEventsProducer.sendLibraryEventBlocking(libraryEvent);
+        // approach is block operation (with get specified) so this log will happens
+        // after event send to kafka
         log.info("libary event is sent to kafka");
         // this will print before sendLibraryEvent handle success
         return ResponseEntity.status(HttpStatus.CREATED).body(libraryEvent);
