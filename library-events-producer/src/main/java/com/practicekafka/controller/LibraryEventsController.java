@@ -32,10 +32,14 @@ public class LibraryEventsController {
 
         log.info("libraryEvent : {}", libraryEvent);
         // invoke the kafka producer
+        // #1 approach
         // libraryEventsProducer.sendLibraryEvent(libraryEvent);
-        libraryEventsProducer.sendLibraryEventBlocking(libraryEvent);
+        // #2 approach
+        // libraryEventsProducer.sendLibraryEventBlocking(libraryEvent);
         // approach is block operation (with get specified) so this log will happens
         // after event send to kafka
+        // #3 approach
+        libraryEventsProducer.sendLibraryEventProducerRecord(libraryEvent);
         log.info("libary event is sent to kafka");
         // this will print before sendLibraryEvent handle success
         return ResponseEntity.status(HttpStatus.CREATED).body(libraryEvent);
