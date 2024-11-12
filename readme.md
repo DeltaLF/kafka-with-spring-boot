@@ -19,4 +19,6 @@ example output:
         Topic: library-events   Partition: 1    Leader: 2       Replicas: 2,1,3 Isr: 2,1,3
         Topic: library-events   Partition: 2    Leader: 3       Replicas: 3,2,1 Isr: 3,2,1
 
+consumer:
+docker exec --interactive --tty kafka1 kafka-console-consumer --bootstrap-server kafka1:19092 --topic <topic_name> --from-beginning
 ```
