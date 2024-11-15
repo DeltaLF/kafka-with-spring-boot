@@ -13,6 +13,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.practicekafka.domain.LibraryEvent;
 import com.practicekafka.producer.LibraryEventsProducer;
 
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
@@ -27,7 +28,7 @@ public class LibraryEventsController {
 
     @PostMapping("/v1/libraryevent")
     public ResponseEntity<LibraryEvent> postLibraryEvent(
-            @RequestBody LibraryEvent libraryEvent)
+            @RequestBody @Valid LibraryEvent libraryEvent)
             throws JsonProcessingException, InterruptedException, ExecutionException, TimeoutException {
 
         log.info("libraryEvent : {}", libraryEvent);

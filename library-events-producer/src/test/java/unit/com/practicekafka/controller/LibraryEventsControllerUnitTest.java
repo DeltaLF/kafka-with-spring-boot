@@ -42,4 +42,17 @@ public class LibraryEventsControllerUnitTest {
                 .andExpect(status().isCreated());
     }
 
+    @Test
+    void postLibraryEvent_withInvalidValues() throws Exception {
+        var json = objectMapper.writeValueAsString(TestUtil.libraryEventRecordWithInvalidBook());
+        when(libraryEventsProducer.sendLibraryEventProducerRecord(isA(LibraryEvent.class)))
+                .thenReturn(null);
+        mockMvc
+                .perform(
+                        MockMvcRequestBuilders.post("/v1/libraryevent")
+                                .content(json)
+                                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().is4xxClientError());
+    }
+
 }
