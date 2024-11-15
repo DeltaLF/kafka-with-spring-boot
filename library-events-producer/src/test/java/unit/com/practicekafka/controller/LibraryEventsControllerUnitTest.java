@@ -1,5 +1,6 @@
 package com.practicekafka.controller;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.when;
@@ -9,6 +10,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,39 +22,45 @@ import com.practicekafka.util.TestUtil;
 @WebMvcTest(LibraryEventsController.class)
 public class LibraryEventsControllerUnitTest {
 
-    @Autowired
-    MockMvc mockMvc;
+        @Autowired
+        MockMvc mockMvc;
 
-    @Autowired
-    ObjectMapper objectMapper;
+        @Autowired
+        ObjectMapper objectMapper;
 
-    @MockBean
-    LibraryEventsProducer libraryEventsProducer;
+        @MockBean
+        LibraryEventsProducer libraryEventsProducer;
 
-    @Test
-    void postLibraryEvent() throws Exception {
-        var json = objectMapper.writeValueAsString(TestUtil.libraryEventRecord());
-        when(libraryEventsProducer.sendLibraryEventProducerRecord(isA(LibraryEvent.class)))
-                .thenReturn(null);
-        mockMvc
-                .perform(
-                        MockMvcRequestBuilders.post("/v1/libraryevent")
-                                .content(json)
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isCreated());
-    }
+        @Test
+        void postLibraryEvent() throws Exception {
+                var json = objectMapper.writeValueAsString(TestUtil.libraryEventRecord());
+                when(libraryEventsProducer.sendLibraryEventProducerRecord(isA(LibraryEvent.class)))
+                                .thenReturn(null);
+                mockMvc
+                                .perform(
+                                                MockMvcRequestBuilders.post("/v1/libraryevent")
+                                                                .content(json)
+                                                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().isCreated());
+        }
 
-    @Test
-    void postLibraryEvent_withInvalidValues() throws Exception {
-        var json = objectMapper.writeValueAsString(TestUtil.libraryEventRecordWithInvalidBook());
-        when(libraryEventsProducer.sendLibraryEventProducerRecord(isA(LibraryEvent.class)))
-                .thenReturn(null);
-        mockMvc
-                .perform(
-                        MockMvcRequestBuilders.post("/v1/libraryevent")
-                                .content(json)
-                                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().is4xxClientError());
-    }
+        @Test
+        void postLibraryEvent_withInvalidValues() throws Exception {
+                var json = objectMapper.writeValueAsString(TestUtil.libraryEventRecordWithInvalidBook());
+                when(libraryEventsProducer.sendLibraryEventProducerRecord(isA(LibraryEvent.class)))
+                                .thenReturn(null);
+                // var expectedErrorMessage = "errorMessage: book.bookId - must not be null,
+                // book.bookName - must not be blank";
+                String bookIdErrorMessage = "book.bookId - must not be null";
+                String bookNameErrorMessage = "book.bookName - must not be blank";
+                mockMvc
+                                .perform(
+                                                MockMvcRequestBuilders.post("/v1/libraryevent")
+                                                                .content(json)
+                                                                .contentType(MediaType.APPLICATION_JSON))
+                                .andExpect(status().is4xxClientError())
+                                .andExpect(content().string(containsString(bookIdErrorMessage)))
+                                .andExpect(content().string(containsString(bookNameErrorMessage)));
+        }
 
 }
