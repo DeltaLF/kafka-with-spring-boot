@@ -1,0 +1,9 @@
+{
+  "libraryEventId": null,
+  "libraryEventType": "NEW",
+  "book": {
+    "bookId": 1,
+    "bookName": "Java",
+    "bookAuthor": "Kafka"
+  }
+}
