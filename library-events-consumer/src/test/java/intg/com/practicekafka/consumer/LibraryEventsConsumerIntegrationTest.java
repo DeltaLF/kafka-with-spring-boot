@@ -1,6 +1,7 @@
 package com.practicekafka.consumer;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -26,7 +27,10 @@ import org.springframework.kafka.test.utils.ContainerTestUtils;
 import org.springframework.test.context.TestPropertySource;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.practicekafka.entity.Book;
 import com.practicekafka.entity.LibraryEvent;
+import com.practicekafka.entity.LibraryEventType;
 import com.practicekafka.jpa.LibraryEventsRepository;
 import com.practicekafka.service.LibraryEventsService;
 
@@ -58,6 +62,9 @@ public class LibraryEventsConsumerIntegrationTest {
     @Autowired
     LibraryEventsRepository libraryEventsRepository;
 
+    @Autowired
+    ObjectMapper objectMapper;
+
     @BeforeEach
     void setUp() {
 
@@ -88,6 +95,31 @@ public class LibraryEventsConsumerIntegrationTest {
             assert libraryEvent.getLibraryEventId() != null;
             assertEquals(libraryEvent.getBook().getBookId(), 123);
         });
+    }
+
+    @Test
+    void publishUpdateLibraryEvent() throws InterruptedException, ExecutionException, JsonProcessingException {
+        String json = "{\"libraryEventId\":null,\"libraryEventType\": \"NEW\",\"book\":{\"bookId\":123,\"bookName\":\"Hello world\",\"bookAuthor\":\"Kafka\"}}";
+        LibraryEvent libraryEvent = objectMapper.readValue(json, LibraryEvent.class);
+        libraryEvent.getBook().setLibraryEvent(libraryEvent);
+        libraryEventsRepository.save(libraryEvent);
+
+        Book updatedBook = Book.builder().bookId(123).bookName("Hello world v2").bookAuthor("fakfa").build();
+        libraryEvent.setLibraryEventType(LibraryEventType.UPDATE);
+        libraryEvent.setBook(updatedBook);
+        String updatedJson = objectMapper.writeValueAsString(libraryEvent);
+
+        kafkaTemplate.sendDefault(libraryEvent.getLibraryEventId(), updatedJson).get();
+
+        CountDownLatch latch = new CountDownLatch(1);
+        latch.await(3, TimeUnit.SECONDS);
+
+        verify(libraryEventsConsumerSpy, times(1)).onMessage(isA(ConsumerRecord.class));
+        verify(libraryEventsServiceSpy, times(1)).processLibraryEvent(isA(ConsumerRecord.class));
+        LibraryEvent persistedLibraryEvent = libraryEventsRepository
+                .findById(libraryEvent.getLibraryEventId()).get();
+        assertEquals(persistedLibraryEvent.getBook().getBookName(), "Hello world v2");
+        assertEquals(persistedLibraryEvent.getBook().getBookAuthor(), "fakfa");
     }
 
 }
