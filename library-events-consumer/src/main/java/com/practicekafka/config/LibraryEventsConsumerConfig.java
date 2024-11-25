@@ -6,8 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.core.ConsumerFactory;
-;
+import org.springframework.kafka.core.ConsumerFactory;;
 
 @Configuration
 @EnableKafka
@@ -20,6 +19,7 @@ public class LibraryEventsConsumerConfig {
             ConsumerFactory<Object, Object> kafkaConsumerFactory) {
         ConcurrentKafkaListenerContainerFactory<Object, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
         configurer.configure(factory, kafkaConsumerFactory);
+        factory.setConcurrency(3); // spawn 3 kafka listeners (recommend for kafka not running in cloud)
         // factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
 
         return factory;
