@@ -122,4 +122,19 @@ public class LibraryEventsConsumerIntegrationTest {
         assertEquals(persistedLibraryEvent.getBook().getBookAuthor(), "fakfa");
     }
 
+    @Test
+    void publishUpdateLibraryEvent_null_LibraryEvent()
+            throws InterruptedException, ExecutionException, JsonProcessingException {
+        String json = "{\"libraryEventId\":null,\"libraryEventType\": \"UPDATE \",\"book\":{\"bookId\":123,\"bookName\":\"Hello world\",\"bookAuthor\":\"Kafka\"}}";
+
+        kafkaTemplate.sendDefault(json).get();
+
+        CountDownLatch latch = new CountDownLatch(1);
+        latch.await(5, TimeUnit.SECONDS);
+
+        // because the eventId is not provided and consumer will retry it
+        // the retry fixBackOff is defined in LibraryEventsConsumerConfig
+        verify(libraryEventsConsumerSpy, times(3)).onMessage(isA(ConsumerRecord.class));
+        verify(libraryEventsServiceSpy, times(3)).processLibraryEvent(isA(ConsumerRecord.class));
+    }
 }
