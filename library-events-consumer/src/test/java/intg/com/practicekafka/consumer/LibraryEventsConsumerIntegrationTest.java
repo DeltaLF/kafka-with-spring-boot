@@ -134,7 +134,8 @@ public class LibraryEventsConsumerIntegrationTest {
 
         // because the eventId is not provided and consumer will retry it
         // the retry fixBackOff is defined in LibraryEventsConsumerConfig
-        verify(libraryEventsConsumerSpy, times(3)).onMessage(isA(ConsumerRecord.class));
-        verify(libraryEventsServiceSpy, times(3)).processLibraryEvent(isA(ConsumerRecord.class));
+        // change to 1 because it's pointless to retry for IllegalArgumentsException
+        verify(libraryEventsConsumerSpy, times(1)).onMessage(isA(ConsumerRecord.class));
+        verify(libraryEventsServiceSpy, times(1)).processLibraryEvent(isA(ConsumerRecord.class));
     }
 }
