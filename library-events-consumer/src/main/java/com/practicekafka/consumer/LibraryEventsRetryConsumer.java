@@ -12,14 +12,14 @@ import lombok.extern.slf4j.Slf4j;
 
 @Component
 @Slf4j
-public class LibraryEventsConsumer {
-
+public class LibraryEventsRetryConsumer {
     @Autowired
     private LibraryEventsService libraryEventsService;
 
-    @KafkaListener(topics = { "library-events" }, groupId = "library-events-listener-group")
+    @KafkaListener(topics = { "${topics.retry}" }, groupId = "retry-listener-group")
+    // retry topic defined in application.yml
     public void onMessage(ConsumerRecord<Integer, String> consumerRecord) throws JsonProcessingException {
-        log.info("ConsumerRecord : {}", consumerRecord);
+        log.info("ConsumerRecord in Retry Consumer : {}", consumerRecord);
         libraryEventsService.processLibraryEvent(consumerRecord);
     }
 }
