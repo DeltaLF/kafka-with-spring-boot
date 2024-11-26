@@ -2,6 +2,7 @@ package com.practicekafka.config;
 
 import java.util.List;
 
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,11 +15,13 @@ import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.listener.ConsumerRecordRecoverer;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.util.backoff.FixedBackOff;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.practicekafka.service.FailureService;
 
 import lombok.extern.slf4j.Slf4j;;
 
@@ -26,6 +29,9 @@ import lombok.extern.slf4j.Slf4j;;
 @EnableKafka
 @Slf4j
 public class LibraryEventsConsumerConfig {
+
+    public static final String RETRY = "RETRY";
+    public static final String DEAD = "DEAD";
 
     @Autowired
     KafkaTemplate kafkaTemplate;
@@ -35,6 +41,9 @@ public class LibraryEventsConsumerConfig {
 
     @Value("${topics.dlt}")
     private String deadLetterTopic;
+
+    @Autowired
+    private FailureService failureService;
 
     public DeadLetterPublishingRecoverer publishingRecoverer() {
 
@@ -51,6 +60,21 @@ public class LibraryEventsConsumerConfig {
         return recoverer;
     }
 
+    ConsumerRecordRecoverer consumerRecordRecoverer = (consumerRecord, e) -> {
+        log.error("# exception in consumerRecordRecoverer : {}", e.getMessage());
+        var record = (ConsumerRecord<Integer, String>) consumerRecord;
+        if (e.getCause() instanceof RecoverableDataAccessException) {
+            // return new TopicPartition(retryTopic, r.partition());
+            // recoverable logic
+            failureService.saveFailedRecord(record, e, RETRY);
+        } else {
+            // return new TopicPartition(deadLetterTopic, r.partition());
+            // non recoverable logic
+            failureService.saveFailedRecord(record, e, DEAD);
+
+        }
+    };
+
     public DefaultErrorHandler errorHandler() {
 
         var exceptionsToIgnoreList = List.of(IllegalArgumentException.class, JsonProcessingException.class);
@@ -58,7 +82,11 @@ public class LibraryEventsConsumerConfig {
 
         var fixedBackOff = new FixedBackOff(1000L, 2);
         // retry twice with delay 1s
-        var errorHandler = new DefaultErrorHandler(publishingRecoverer(), fixedBackOff);
+        var errorHandler = new DefaultErrorHandler(
+                consumerRecordRecoverer,
+                // publishingRecoverer(),
+                // aside from passing mesage to try, dlt topics, we can also store it to db
+                fixedBackOff);
 
         // errorHandler.addNotRetryableExceptions();
         exceptionsToIgnoreList.forEach(errorHandler::addNotRetryableExceptions);

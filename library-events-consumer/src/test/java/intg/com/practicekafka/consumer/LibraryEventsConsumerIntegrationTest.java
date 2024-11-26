@@ -14,6 +14,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.times;
@@ -36,6 +37,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.practicekafka.entity.Book;
 import com.practicekafka.entity.LibraryEvent;
 import com.practicekafka.entity.LibraryEventType;
+import com.practicekafka.jpa.FailureRecordRepository;
 import com.practicekafka.jpa.LibraryEventsRepository;
 import com.practicekafka.service.LibraryEventsService;
 
@@ -70,6 +72,9 @@ public class LibraryEventsConsumerIntegrationTest {
 
     @Autowired
     ObjectMapper objectMapper;
+
+    @Autowired
+    private FailureRecordRepository failureRecordRepository;
 
     private Consumer<Integer, String> consumer;
 
@@ -145,6 +150,9 @@ public class LibraryEventsConsumerIntegrationTest {
         assertEquals(persistedLibraryEvent.getBook().getBookAuthor(), "fakfa");
     }
 
+    // For non reocverable either a. store in topic b. store in db
+    // publishUpdateLibraryEvent_null_LibraryEvent_failureRecord
+    @Disabled
     @Test
     void publishUpdateLibraryEvent_null_LibraryEvent()
             // not recoverable -> DLT topic
@@ -197,4 +205,30 @@ public class LibraryEventsConsumerIntegrationTest {
         System.out.println("### consumerRecord : " + consumerRecord.value());
         assertEquals(consumerRecord.value(), json);
     }
+
+    @Test
+    void publishUpdateLibraryEvent_null_LibraryEvent_failureRecord()
+            // not recoverable -> DLT topic
+            throws InterruptedException, ExecutionException, JsonProcessingException {
+        String json = "{\"libraryEventId\": 555,\"libraryEventType\": \"UPDATE\",\"book\":{\"bookId\":123,\"bookName\":\"Hello world\",\"bookAuthor\":\"Kafka\"}}";
+
+        kafkaTemplate.sendDefault(json).get();
+
+        CountDownLatch latch = new CountDownLatch(1);
+        latch.await(5, TimeUnit.SECONDS);
+
+        // because the eventId is not provided and consumer will retry it
+        // the retry fixBackOff is defined in LibraryEventsConsumerConfig
+        // change to 1 because it's pointless to retry for IllegalArgumentsException
+        verify(libraryEventsConsumerSpy, times(1)).onMessage(isA(ConsumerRecord.class));
+        verify(libraryEventsServiceSpy, times(1)).processLibraryEvent(isA(ConsumerRecord.class));
+
+        var count = failureRecordRepository.count();
+        assertEquals(count, 1);
+
+        failureRecordRepository.findAll().forEach(failureRecord -> {
+            System.out.println("# failureRecord :" + failureRecord);
+        });
+    }
+
 }
