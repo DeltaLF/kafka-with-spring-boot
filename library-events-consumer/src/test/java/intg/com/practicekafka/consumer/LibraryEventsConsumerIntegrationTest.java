@@ -147,6 +147,7 @@ public class LibraryEventsConsumerIntegrationTest {
 
     @Test
     void publishUpdateLibraryEvent_null_LibraryEvent()
+            // not recoverable -> DLT topic
             throws InterruptedException, ExecutionException, JsonProcessingException {
         String json = "{\"libraryEventId\": 555,\"libraryEventType\": \"UPDATE\",\"book\":{\"bookId\":123,\"bookName\":\"Hello world\",\"bookAuthor\":\"Kafka\"}}";
 
@@ -160,10 +161,21 @@ public class LibraryEventsConsumerIntegrationTest {
         // change to 1 because it's pointless to retry for IllegalArgumentsException
         verify(libraryEventsConsumerSpy, times(1)).onMessage(isA(ConsumerRecord.class));
         verify(libraryEventsServiceSpy, times(1)).processLibraryEvent(isA(ConsumerRecord.class));
+
+        var configs = new HashMap<>(KafkaTestUtils.consumerProps("groupFailed", "true", embeddedKafkaBroker));
+        configs.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
+        consumer = new DefaultKafkaConsumerFactory<Integer, String>(configs)
+                .createConsumer();
+        embeddedKafkaBroker.consumeFromAnEmbeddedTopic(consumer, deadLetterTopic);
+
+        ConsumerRecord<Integer, String> consumerRecord = KafkaTestUtils.getSingleRecord(consumer, deadLetterTopic);
+        System.out.println("### consumerRecord : " + consumerRecord.value());
+        assertEquals(consumerRecord.value(), json);
     }
 
     @Test
     void publishUpdateLibraryEvent_9999_LibraryEvent()
+            // recoverable -> retry topic
             throws InterruptedException, ExecutionException, JsonProcessingException {
         String json = "{\"libraryEventId\":9999,\"libraryEventType\": \"UPDATE \",\"book\":{\"bookId\":123,\"bookName\":\"Hello world\",\"bookAuthor\":\"Kafka\"}}";
 
@@ -175,7 +187,7 @@ public class LibraryEventsConsumerIntegrationTest {
         verify(libraryEventsConsumerSpy, times(3)).onMessage(isA(ConsumerRecord.class));
         verify(libraryEventsServiceSpy, times(3)).processLibraryEvent(isA(ConsumerRecord.class));
 
-        var configs = new HashMap<>(KafkaTestUtils.consumerProps("group1", "true", embeddedKafkaBroker));
+        var configs = new HashMap<>(KafkaTestUtils.consumerProps("groupRecoverable", "true", embeddedKafkaBroker));
         configs.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         consumer = new DefaultKafkaConsumerFactory<Integer, String>(configs)
                 .createConsumer();
