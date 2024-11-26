@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.RecoverableDataAccessException;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -26,6 +27,10 @@ public class LibraryEventsService {
     public void processLibraryEvent(ConsumerRecord<Integer, String> consumerRecord) throws JsonProcessingException {
         LibraryEvent libraryEvent = objectMapper.readValue(consumerRecord.value(), LibraryEvent.class);
         log.info("libraryEvent : {}", libraryEvent);
+
+        if (libraryEvent.getLibraryEventId() != null && (libraryEvent.getLibraryEventId() == 9999)) {
+            throw new RecoverableDataAccessException("Temporary Network Issue");
+        }
 
         switch (libraryEvent.getLibraryEventType()) {
             case NEW:
