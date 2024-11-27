@@ -17,6 +17,17 @@
     },
     {
       "type": "java",
+      "name": "LibraryEventsConsumerApplication",
+      "request": "launch",
+      "mainClass": "com.practicekafka.LibraryEventsConsumerApplication",
+      "projectName": "",
+      "env": {
+        // "SPRING_PROFILES_ACTIVE": "local"
+        "SPRING_PROFILES_ACTIVE": "ssl"
+      }
+    },
+    {
+      "type": "java",
       "name": "Current File",
       "request": "launch",
       "mainClass": "${file}"
