@@ -62,6 +62,7 @@ public class LibraryEventsProducer {
 
         // with get specified
         // 1. Blocking call - get metadata about the kafka cluster (only the first time)
+        // => max.block.ms
         // 2. Block and wait until the message is sent to the kafka broker
         var sendResult = kafkaTemplate.send(topic, key, value)
                 // .get();
