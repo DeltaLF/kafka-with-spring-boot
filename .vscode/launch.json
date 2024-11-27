@@ -9,7 +9,22 @@
       "name": "LibraryEventsProducerApplication",
       "request": "launch",
       "mainClass": "com.practicekafka.LibraryEventsProducerApplication",
-      "projectName": ""
+      "projectName": "",
+      "env": {
+        // "SPRING_PROFILES_ACTIVE": "local"
+        "SPRING_PROFILES_ACTIVE": "ssl"
+      }
+    },
+    {
+      "type": "java",
+      "name": "LibraryEventsConsumerApplication",
+      "request": "launch",
+      "mainClass": "com.practicekafka.LibraryEventsConsumerApplication",
+      "projectName": "",
+      "env": {
+        // "SPRING_PROFILES_ACTIVE": "local"
+        "SPRING_PROFILES_ACTIVE": "ssl"
+      }
     },
     {
       "type": "java",
