@@ -22,3 +22,9 @@ example output:
 consumer:
 docker exec --interactive --tty kafka1 kafka-console-consumer --bootstrap-server kafka1:19092 --topic <topic_name> --from-beginning
 ```
+
+### consumes the topic that stores failed message
+
+```
+docker exec --interactive --tty kafka1 kafka-console-consumer --bootstrap-server kafka1:19092 --topic library-events.DLT --from-beginning
+```
